@@ -1,4 +1,3 @@
-import data from "./data.json"
 import { VideoFeed } from "../components/VideoFeed"
 
 type RedditListing = {
@@ -84,7 +83,17 @@ function getVideosFromListing(raw: any): VideoItem[] {
   return unique
 }
 
-export default function Page() {
+export default async function Page() {
+  const res = await fetch("https://reddtok.vercel.app/api/new.json", {
+    // Always get fresh posts when the page is loaded
+    cache: "no-store",
+  })
+
+  if (!res.ok) {
+    throw new Error(`Failed to load feed: ${res.status} ${res.statusText}`)
+  }
+
+  const data = await res.json()
   const videos = getVideosFromListing(data)
 
   return <VideoFeed videos={videos} />

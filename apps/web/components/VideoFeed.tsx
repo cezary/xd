@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import ReactHlsPlayer from "./hls-player"
 
 type VideoItem = {
@@ -17,8 +17,62 @@ type VideoFeedProps = {
 
 export function VideoFeed({ videos }: VideoFeedProps) {
   const sectionRefs = useRef<(HTMLElement | null)[]>([])
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
+  const videoRefs = useRef<React.RefObject<HTMLVideoElement | null>[]>([])
   const [loaded, setLoaded] = useState<Record<string, boolean>>({})
+  const [userPaused, setUserPaused] = useState<Record<string, boolean>>({})
+  const lastActiveIdRef = useRef<string | null>(null)
+  const [isMuted, setIsMuted] = useState(true)
+
+  const ensureVideoRef = (index: number): React.RefObject<HTMLVideoElement | null> => {
+    if (!videoRefs.current[index]) {
+      videoRefs.current[index] = { current: null }
+    }
+    return videoRefs.current[index]
+  }
+
+  const handleVideoClick = (id: string, index: number) => {
+    const refObj = ensureVideoRef(index)
+    const el = refObj.current
+    if (!el) return
+
+    // First interaction: unmute globally, then play
+    if (isMuted) {
+      setIsMuted(false)
+      // Immediately unmute all existing videos
+      // videoRefs.current.forEach(r => {
+      //   if (r?.current) {
+      //     r.current.muted = false
+      //   }
+      // })
+
+      if (el.paused) {
+        el
+          .play()
+          .then(() => {
+            setUserPaused(prev => ({ ...prev, [id]: false }))
+          })
+          .catch(() => {
+            // Ignore play errors
+          })
+      }
+      return
+    }
+
+    // After unmuted: toggle play/pause
+    if (el.paused) {
+      el
+        .play()
+        .then(() => {
+          setUserPaused(prev => ({ ...prev, [id]: false }))
+        })
+        .catch(() => {
+          // Ignore play errors
+        })
+    } else {
+      el.pause()
+      setUserPaused(prev => ({ ...prev, [id]: true }))
+    }
+  }
 
   useEffect(() => {
     if (!sectionRefs.current.length) return
@@ -43,18 +97,34 @@ export function VideoFeed({ videos }: VideoFeedProps) {
       })
 
       if (activeId) {
+        const previousActiveId = lastActiveIdRef.current
+        const isNewActive = activeId !== previousActiveId
+        lastActiveIdRef.current = activeId
+
+        // If this is a newly active video, clear any previous userPaused flag
+        if (isNewActive) {
+          setUserPaused(prev => {
+            if (!prev[activeId!]) return prev
+            const next = { ...prev }
+            delete next[activeId!]
+            return next
+          })
+        }
+
         // Pause all videos first
-        videoRefs.current.forEach(v => {
+        videoRefs.current.forEach(r => {
+          const v = r?.current
           if (v && !v.paused) {
             v.pause()
           }
         })
 
-        // Then play the active one
+        // Then play the active one if the user has not manually paused it
         const activeIndex = videos.findIndex(v => v.id === activeId)
-        const activeVideo = videoRefs.current[activeIndex]
-        if (activeVideo) {
-          // Some browsers require a catch on play()
+        const activeRef = videoRefs.current[activeIndex]
+        const activeVideo = activeRef?.current
+        if (activeVideo && !userPaused[activeId]) {
+          activeVideo.muted = isMuted
           activeVideo
             .play()
             .catch(() => {
@@ -63,7 +133,8 @@ export function VideoFeed({ videos }: VideoFeedProps) {
         }
       } else {
         // If nothing is strongly in view, pause all
-        videoRefs.current.forEach(v => {
+        videoRefs.current.forEach(r => {
+          const v = r?.current
           if (v && !v.paused) v.pause()
         })
       }
@@ -79,7 +150,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
     })
 
     return () => observer.disconnect()
-  }, [videos])
+  }, [videos, userPaused, isMuted])
 
   return (
     <div className="h-screen w-full bg-black text-white flex justify-center">
@@ -97,18 +168,16 @@ export function VideoFeed({ videos }: VideoFeedProps) {
             >
               <div className="w-full aspect-9/16 max-h-[90vh] rounded-xl overflow-hidden bg-black shadow-xl flex items-center justify-center">
                 <ReactHlsPlayer
-                  ref={el => {
-                    videoRefs.current[index] = el
-                  }}
+                  ref={ensureVideoRef(index)}
                   className="h-full w-full object-contain bg-black"
                   src={isLoaded ? video.hls_url ?? video.src : undefined}
                   poster={video.thumbnail}
                   playsInline
-                  muted={false}
-                  controls={false}
+                  muted={isMuted}
                   preload="none"
                   autoPlay={isLoaded}
                   loop={true}
+                  onClick={() => handleVideoClick(video.id, index)}
                 />
               </div>
               <div className="mt-4 w-full max-w-md text-center text-base font-medium line-clamp-2">
