@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import ReactHlsPlayer from "./hls-player"
 import { unescape as _unescape } from 'lodash-es';
 
 type VideoItem = {
@@ -10,6 +9,7 @@ type VideoItem = {
   src: string
   hls_url?: string
   thumbnail?: string
+  reddit_url?: string
 }
 
 type VideoFeedProps = {
@@ -173,24 +173,36 @@ export function VideoFeed({ videos }: VideoFeedProps) {
                 sectionRefs.current[index] = el
               }}
               data-index={index}
-              className="snap-start snap-always h-screen flex flex-col items-center justify-center px-4"
+              className="max-h-dvh snap-start snap-always h-screen flex flex-col items-center justify-center sm:px-4"
             >
-              <div className="w-full aspect-9/16 max-h-[90vh] rounded-xl overflow-hidden bg-black shadow-xl flex items-center justify-center">
-                <ReactHlsPlayer
+              <div className="relative w-fit h-full max-h-[95dvh] rounded-xl overflow-hidden bg-black shadow-xl flex items-center justify-center">
+                <video
                   ref={ensureVideoRef(index)}
-                  className="h-full w-full object-contain bg-black"
-                  src={isLoaded ? video.hls_url ?? video.src : undefined}
+                  className="h-full w-auto object-contain bg-black"
+                  src={isLoaded ? video.hls_url?.replace(/&amp;/g, '&').replace(/f=sd/, 'f=hq') : undefined}
                   poster={video.thumbnail ? _unescape(video.thumbnail) : undefined}
                   playsInline
                   muted={isMuted}
                   preload="none"
-                  autoPlay={isLoaded}
+                  // autoPlay={isLoaded}
+                  autoPlay
                   loop={true}
                   onClick={() => handleVideoClick(video.id, index)}
                 />
-              </div>
-              <div className="mt-4 w-full max-w-md text-center text-base font-medium line-clamp-2">
-                {video.title}
+                <div className="absolute bottom-0 left-0 right-0 w-full p-4 text-base font-medium text-shadow-md">
+                  {video.reddit_url ? (
+                    <a
+                      href={video.reddit_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white hover:text-gray-200 transition-colors line-clamp-1"
+                    >
+                      {video.title}
+                    </a>
+                  ) : (
+                    video.title
+                  )}
+                </div>
               </div>
             </section>
           )

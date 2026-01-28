@@ -16,6 +16,7 @@ type VideoItem = {
   src: string
   hls_url?: string
   thumbnail?: string
+  reddit_url?: string
 }
 
 function extractVideoFromPost(post: any): VideoItem | null {
@@ -55,12 +56,19 @@ function extractVideoFromPost(post: any): VideoItem | null {
 
   const thumb = unescape(post.preview?.images[0]?.resolutions.at(-1)?.url);
 
+  // Construct Reddit post URL from permalink
+  const permalink = post.permalink as string | undefined
+  const reddit_url = permalink
+    ? `https://reddit.com${permalink}`
+    : undefined
+
   return {
     id,
     title,
     src: src ?? hls_url ?? "",
     hls_url,
     thumbnail: typeof thumb === "string" ? thumb : undefined,
+    reddit_url,
   }
 }
 
