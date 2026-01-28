@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react"
 import ReactHlsPlayer from "./hls-player"
+import { unescape as _unescape } from 'lodash-es';
 
 type VideoItem = {
   id: string
@@ -111,11 +112,18 @@ export function VideoFeed({ videos }: VideoFeedProps) {
           })
         }
 
-        // Pause all videos first
-        videoRefs.current.forEach(r => {
+        // Pause and reset all non-active videos first
+        videoRefs.current.forEach((r, index) => {
           const v = r?.current
-          if (v && !v.paused) {
+          if (!v) return
+          const vid = videos[index]?.id
+          if (vid && vid !== activeId) {
             v.pause()
+            try {
+              v.currentTime = 0
+            } catch {
+              // ignore seek errors
+            }
           }
         })
 
@@ -132,7 +140,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
             })
         }
       } else {
-        // If nothing is strongly in view, pause all
+        // If nothing is strongly in view, pause all (and leave time as-is)
         videoRefs.current.forEach(r => {
           const v = r?.current
           if (v && !v.paused) v.pause()
@@ -157,6 +165,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
       <div className="h-full w-full max-w-3xl snap-y snap-mandatory overflow-y-scroll">
         {videos.map((video, index) => {
           const isLoaded = loaded[video.id]
+
           return (
             <section
               key={video.id}
@@ -164,14 +173,14 @@ export function VideoFeed({ videos }: VideoFeedProps) {
                 sectionRefs.current[index] = el
               }}
               data-index={index}
-              className="snap-start h-screen flex flex-col items-center justify-center px-4"
+              className="snap-start snap-always h-screen flex flex-col items-center justify-center px-4"
             >
               <div className="w-full aspect-9/16 max-h-[90vh] rounded-xl overflow-hidden bg-black shadow-xl flex items-center justify-center">
                 <ReactHlsPlayer
                   ref={ensureVideoRef(index)}
                   className="h-full w-full object-contain bg-black"
                   src={isLoaded ? video.hls_url ?? video.src : undefined}
-                  poster={video.thumbnail}
+                  poster={video.thumbnail ? _unescape(video.thumbnail) : undefined}
                   playsInline
                   muted={isMuted}
                   preload="none"

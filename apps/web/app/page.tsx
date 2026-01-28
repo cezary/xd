@@ -1,3 +1,5 @@
+import { unescape as _unescape } from 'lodash-es';
+
 import { VideoFeed } from "../components/VideoFeed"
 
 type RedditListing = {
@@ -51,10 +53,7 @@ function extractVideoFromPost(post: any): VideoItem | null {
 
   if (!looksLikeVideo) return null
 
-  const thumb =
-    post.thumbnail && typeof post.thumbnail === "string" && post.thumbnail.startsWith("http")
-      ? (post.thumbnail as string)
-      : post.preview?.images?.[0]?.source?.url
+  const thumb = unescape(post.preview?.images[0]?.resolutions.at(-1)?.url);
 
   return {
     id,
