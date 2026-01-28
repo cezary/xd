@@ -195,7 +195,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
                       href={video.reddit_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-white hover:text-gray-200 transition-colors line-clamp-1"
+                      className="text-white hover:text-gray-200 transition-colors line-clamp-1 hover:line-clamp-none"
                     >
                       {video.title}
                     </a>
