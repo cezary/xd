@@ -165,7 +165,10 @@ export function VideoFeed({ videos }: VideoFeedProps) {
       <div className="h-full w-full max-w-3xl snap-y snap-mandatory overflow-y-scroll">
         {videos.map((video, index) => {
           const isLoaded = loaded[video.id]
+          const isPlaying = loaded[video.id] && !userPaused[video.id]
+          const isPreloading = loaded[videos[index-1]?.id] || loaded[videos[index+1]?.id];
 
+          console.log('video', video, isLoaded, isPlaying, isPreloading);
           return (
             <section
               key={video.id}
@@ -183,9 +186,9 @@ export function VideoFeed({ videos }: VideoFeedProps) {
                   poster={video.thumbnail ? _unescape(video.thumbnail) : undefined}
                   playsInline
                   muted={isMuted}
-                  preload="none"
+                  preload={isPreloading ? "auto" : "none"}
                   // autoPlay={isLoaded}
-                  autoPlay
+                  // autoPlay
                   loop={true}
                   onClick={() => handleVideoClick(video.id, index)}
                 />
