@@ -13,6 +13,7 @@ type VideoItem = {
   id: string
   title: string
   src: string
+  hls_url?: string
   thumbnail?: string
 }
 
@@ -26,6 +27,7 @@ function extractVideoFromPost(post: any): VideoItem | null {
     post.preview?.reddit_video_preview
 
   let src: string | undefined
+  const hls_url: string | undefined = redditVideo?.hls_url ?? redditVideo?.hlsUrl
 
   if (redditVideo?.fallback_url) {
     src = redditVideo.fallback_url as string
@@ -35,15 +37,18 @@ function extractVideoFromPost(post: any): VideoItem | null {
     src = post.url as string
   }
 
-  if (!id || !src) return null
+  if (!id || (!src && !hls_url)) return null
 
   // Only keep obvious video URLs
-  const lowerSrc = src.toLowerCase()
+  const baseSrc = (hls_url ?? src) as string
+  const lowerSrc = baseSrc.toLowerCase()
   const looksLikeVideo =
     lowerSrc.endsWith(".mp4") ||
     lowerSrc.endsWith(".webm") ||
+    lowerSrc.endsWith(".m3u8") ||
     lowerSrc.includes("v.redd.it") ||
-    lowerSrc.includes("reddit_video")
+    lowerSrc.includes("reddit_video") ||
+    lowerSrc.includes(".hls")
 
   if (!looksLikeVideo) return null
 
@@ -55,7 +60,8 @@ function extractVideoFromPost(post: any): VideoItem | null {
   return {
     id,
     title,
-    src,
+    src: src ?? hls_url ?? "",
+    hls_url,
     thumbnail: typeof thumb === "string" ? thumb : undefined,
   }
 }

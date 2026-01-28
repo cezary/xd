@@ -1,11 +1,13 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import ReactHlsPlayer from "./hls-player"
 
 type VideoItem = {
   id: string
   title: string
   src: string
+  hls_url?: string
   thumbnail?: string
 }
 
@@ -94,17 +96,16 @@ export function VideoFeed({ videos }: VideoFeedProps) {
               className="snap-start h-screen flex flex-col items-center justify-center px-4"
             >
               <div className="w-full aspect-9/16 max-h-[90vh] rounded-xl overflow-hidden bg-black shadow-xl flex items-center justify-center">
-                <video
+                <ReactHlsPlayer
                   ref={el => {
                     videoRefs.current[index] = el
                   }}
                   className="h-full w-full object-contain bg-black"
-                  src={isLoaded ? video.src : undefined}
-                  data-src={video.src}
+                  src={isLoaded ? video.hls_url ?? video.src : undefined}
                   poster={video.thumbnail}
                   playsInline
-                  muted
-                  controls
+                  muted={false}
+                  controls={false}
                   preload="none"
                   autoPlay={isLoaded}
                   loop={true}
