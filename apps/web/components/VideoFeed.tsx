@@ -331,7 +331,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
                     }
                   }}
                 />
-                <div className="absolute bottom-0 left-0 right-0 w-full p-4 text-base font-medium text-shadow-md flex flex-col gap-0.5">
+                <div className="absolute bottom-0 left-0 right-0 w-full p-4 text-base font-medium text-shadow-lg/30 flex flex-col gap-0.5">
                   {video.subreddit && (
                     <a
                       href={`https://reddit.com/r/${video.subreddit}`}
