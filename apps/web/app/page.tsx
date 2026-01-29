@@ -17,6 +17,7 @@ type VideoItem = {
   hls_url?: string
   thumbnail?: string
   reddit_url?: string
+  subreddit?: string
 }
 
 function extractVideoFromPost(post: any): VideoItem | null {
@@ -62,6 +63,8 @@ function extractVideoFromPost(post: any): VideoItem | null {
     ? `https://reddit.com${permalink}`
     : undefined
 
+  const subreddit = post.subreddit as string | undefined
+
   return {
     id,
     title,
@@ -69,6 +72,7 @@ function extractVideoFromPost(post: any): VideoItem | null {
     hls_url,
     thumbnail: typeof thumb === "string" ? thumb : undefined,
     reddit_url,
+    subreddit: subreddit ? String(subreddit) : undefined,
   }
 }
 

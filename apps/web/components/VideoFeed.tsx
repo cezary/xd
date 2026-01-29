@@ -10,6 +10,7 @@ type VideoItem = {
   hls_url?: string
   thumbnail?: string
   reddit_url?: string
+  subreddit?: string
 }
 
 type VideoFeedProps = {
@@ -191,7 +192,8 @@ export function VideoFeed({ videos }: VideoFeedProps) {
     adjacentIndices.forEach(idx => {
       const ref = videoRefs.current[idx]
       const video = ref?.current
-      if (video && loaded[videos[idx].id]) {
+      const videoItem = videos[idx]
+      if (video && videoItem && loaded[videoItem.id]) {
         // Ensure adjacent videos are paused
         if (!video.paused) {
           video.pause()
@@ -240,13 +242,23 @@ export function VideoFeed({ videos }: VideoFeedProps) {
                   loop={true}
                   onClick={() => handleVideoClick(video.id, index)}
                 />
-                <div className="absolute bottom-0 left-0 right-0 w-full p-4 text-base font-medium text-shadow-md">
+                <div className="absolute bottom-0 left-0 right-0 w-full p-4 text-base font-medium text-shadow-md flex flex-col gap-0.5">
+                  {video.subreddit && (
+                    <a
+                      href={`https://reddit.com/r/${video.subreddit}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white hover:text-white/80 transition-colors"
+                    >
+                      r/{video.subreddit}
+                    </a>
+                  )}
                   {video.reddit_url ? (
                     <a
                       href={video.reddit_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-white hover:text-gray-200 transition-colors line-clamp-1 hover:line-clamp-none"
+                      className="text-white hover:text-white/80 transition-colors line-clamp-1 hover:line-clamp-none"
                     >
                       {video.title}
                     </a>
