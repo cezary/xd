@@ -80,6 +80,7 @@ function getVideosFromListing(raw: any): VideoItem[] {
   const listing = raw as RedditListing
   if (!listing?.data?.children) return []
   const videos = listing.data.children
+    .filter(child => !child.data.crosspost_parent)
     .map(child => extractVideoFromPost(child.data))
     .filter((v): v is VideoItem => v !== null)
 
