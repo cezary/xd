@@ -108,5 +108,10 @@ export default async function Page() {
   const data = await res.json()
   const videos = getVideosFromListing(data)
 
-  return <VideoFeed videos={videos} />
+  return (
+    <>
+      <div className="absolute top-4 left-4 z-10 text-2xl text-shadow-lg/30 mix-blend-difference font-sans font-bold">XD</div>
+      <VideoFeed videos={videos} />
+    </>
+  );
 }
