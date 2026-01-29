@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { unescape as _unescape } from 'lodash-es';
 
 type VideoItem = {
@@ -18,6 +18,7 @@ type VideoFeedProps = {
 }
 
 export function VideoFeed({ videos }: VideoFeedProps) {
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const sectionRefs = useRef<(HTMLElement | null)[]>([])
   const videoRefs = useRef<React.RefObject<HTMLVideoElement | null>[]>([])
   const [loaded, setLoaded] = useState<Record<string, boolean>>({})
@@ -33,7 +34,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
     return videoRefs.current[index]
   }
 
-  const handleVideoClick = (id: string, index: number) => {
+  const handleVideoClick = useCallback((id: string, index: number) => {
     const refObj = ensureVideoRef(index)
     const el = refObj.current
     if (!el) return
@@ -41,22 +42,13 @@ export function VideoFeed({ videos }: VideoFeedProps) {
     // First interaction: unmute globally, then play
     if (isMuted) {
       setIsMuted(false)
-      // Immediately unmute all existing videos
-      // videoRefs.current.forEach(r => {
-      //   if (r?.current) {
-      //     r.current.muted = false
-      //   }
-      // })
-
       if (el.paused && el.currentSrc) {
         el
           .play()
           .then(() => {
             setUserPaused(prev => ({ ...prev, [id]: false }))
           })
-          .catch(() => {
-            // Ignore play errors
-          })
+          .catch(() => {})
       }
       return
     }
@@ -69,15 +61,13 @@ export function VideoFeed({ videos }: VideoFeedProps) {
           .then(() => {
             setUserPaused(prev => ({ ...prev, [id]: false }))
           })
-          .catch(() => {
-            // Ignore play errors
-          })
+          .catch(() => {})
       }
     } else {
       el.pause()
       setUserPaused(prev => ({ ...prev, [id]: true }))
     }
-  }
+  }, [isMuted])
 
   useEffect(() => {
     if (!sectionRefs.current.length) return
@@ -208,9 +198,90 @@ export function VideoFeed({ videos }: VideoFeedProps) {
     })
   }, [activeVideoId, videos, loaded])
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      if (target.closest("input") || target.closest("textarea") || target.closest("[contenteditable]")) return
+
+      const activeIndex = activeVideoId !== null ? videos.findIndex(v => v.id === activeVideoId) : 0
+      const activeVideo = videoRefs.current[activeIndex]?.current
+
+      switch (e.key.toLowerCase()) {
+        case "j": {
+          // Next video
+          e.preventDefault()
+          const nextSection = sectionRefs.current[activeIndex + 1]
+          if (nextSection) nextSection.scrollIntoView({ behavior: "smooth", block: "start" })
+          break
+        }
+        case "k": {
+          // Previous video
+          e.preventDefault()
+          const prevSection = sectionRefs.current[activeIndex - 1]
+          if (prevSection) prevSection.scrollIntoView({ behavior: "smooth", block: "start" })
+          break
+        }
+        case " ": {
+          // Toggle play/pause
+          e.preventDefault()
+          if (activeVideoId !== null && activeVideo) {
+            handleVideoClick(activeVideoId, activeIndex)
+          }
+          break
+        }
+        case "f": {
+          // Toggle fullscreen
+          e.preventDefault()
+          if (!document.fullscreenElement) {
+            container.requestFullscreen?.().catch(() => {})
+          } else {
+            document.exitFullscreen?.()
+          }
+          break
+        }
+        case "m": {
+          // Toggle mute
+          e.preventDefault()
+          setIsMuted(prev => !prev)
+          break
+        }
+        case "arrowleft": {
+          // Back 5 seconds
+          e.preventDefault()
+          if (activeVideo?.currentSrc) {
+            try {
+              activeVideo.currentTime = Math.max(0, activeVideo.currentTime - 5)
+            } catch {}
+          }
+          break
+        }
+        case "arrowright": {
+          // Forward 5 seconds
+          e.preventDefault()
+          if (activeVideo?.currentSrc) {
+            try {
+              activeVideo.currentTime = Math.min(activeVideo.duration ?? 0, activeVideo.currentTime + 5)
+            } catch {}
+          }
+          break
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [videos, activeVideoId, handleVideoClick])
+
   return (
     <div className="h-screen w-screen bg-black text-white">
-      <div className="h-full w-screen snap-y snap-mandatory overflow-y-scroll">
+      <div
+        ref={scrollContainerRef}
+        className="h-full w-screen snap-y snap-mandatory overflow-y-scroll"
+      >
         {videos.map((video, index) => {
           const isActive = activeVideoId === video.id
           const activeIndex = activeVideoId !== null 
