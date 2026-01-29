@@ -201,8 +201,8 @@ export function VideoFeed({ videos }: VideoFeedProps) {
   }, [activeVideoId, videos, loaded])
 
   return (
-    <div className="h-screen w-full bg-black text-white flex justify-center">
-      <div className="h-full w-full max-w-3xl snap-y snap-mandatory overflow-y-scroll">
+    <div className="h-screen w-screen bg-black text-white">
+      <div className="h-full w-screen snap-y snap-mandatory overflow-y-scroll">
         {videos.map((video, index) => {
           const isActive = activeVideoId === video.id
           const activeIndex = activeVideoId !== null 
@@ -228,7 +228,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
               data-index={index}
               className="max-h-svh snap-start snap-always h-screen flex flex-col items-center justify-center sm:px-4"
             >
-              <div className="relative w-fit h-full max-h-[95dvh] rounded-xl overflow-hidden bg-black shadow-xl flex items-center justify-center">
+              <div className="relative w-fit h-full max-h-[95dvh] max-w-3xl rounded-xl overflow-hidden bg-black shadow-xl flex items-center justify-center">
                 <video
                   ref={ensureVideoRef(index)}
                   className="h-full w-auto object-contain bg-black"
