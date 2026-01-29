@@ -48,7 +48,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
       //   }
       // })
 
-      if (el.paused) {
+      if (el.paused && el.currentSrc) {
         el
           .play()
           .then(() => {
@@ -61,16 +61,18 @@ export function VideoFeed({ videos }: VideoFeedProps) {
       return
     }
 
-    // After unmuted: toggle play/pause
+    // After unmuted: toggle play/pause (only if element has a source)
     if (el.paused) {
-      el
-        .play()
-        .then(() => {
-          setUserPaused(prev => ({ ...prev, [id]: false }))
-        })
-        .catch(() => {
-          // Ignore play errors
-        })
+      if (el.currentSrc) {
+        el
+          .play()
+          .then(() => {
+            setUserPaused(prev => ({ ...prev, [id]: false }))
+          })
+          .catch(() => {
+            // Ignore play errors
+          })
+      }
     } else {
       el.pause()
       setUserPaused(prev => ({ ...prev, [id]: true }))
@@ -145,20 +147,24 @@ export function VideoFeed({ videos }: VideoFeedProps) {
           }
         })
 
-        // Then play the active one if the user has not manually paused it
+        // Then play the active one if the user has not manually paused it.
+        // Only call play() if the element has a source to avoid NotSupportedError.
         const activeRef = videoRefs.current[activeIndex]
         const activeVideo = activeRef?.current
         if (activeVideo && !userPaused[activeId]) {
           activeVideo.muted = isMuted
-          activeVideo
-            .play()
-            .catch(() => {
-              // Ignore autoplay errors
-            })
+          if (activeVideo.currentSrc) {
+            activeVideo
+              .play()
+              .catch(() => {
+                // Ignore autoplay errors
+              })
+          }
         }
       } else {
-        // If nothing is strongly in view, pause all (and leave time as-is)
-        setActiveVideoId(null)
+        // Don't set activeVideoId to null — observer can fire with no entry above
+        // threshold and clear every video's src, causing "no supported sources"
+        // when play() is called. Keep last active id so src stays set.
         videoRefs.current.forEach(r => {
           const v = r?.current
           if (v && !v.paused) v.pause()
@@ -214,11 +220,12 @@ export function VideoFeed({ videos }: VideoFeedProps) {
             index === activeIndex - 1 || 
             index === activeIndex + 1
           )
-          const shouldPreload = isAdjacent && !isActive
+          // const shouldPreload = isAdjacent && !isActive
+          const shouldPreload = isAdjacent || isActive
           
           // Only pass src to active video and adjacent videos (for preloading)
           const videoSrc = (isActive || isAdjacent) && loaded[video.id]
-            ? video.hls_url?.replace(/&amp;/g, '&').replace(/f=sd/, 'f=hq') ?? video.src
+            ? video.hls_url?.replace(/&amp;/g, '&').replace(/f=sd/, 'f=hq')
             : undefined
 
           return (
@@ -239,8 +246,19 @@ export function VideoFeed({ videos }: VideoFeedProps) {
                   playsInline
                   muted={isMuted}
                   preload={shouldPreload ? "auto" : "none"}
-                  loop={true}
-                  onClick={() => handleVideoClick(video.id, index)}
+                  // loop
+                  // controls
+                  onClick={(e) => { e.preventDefault(); handleVideoClick(video.id, index) }}
+                  onEnded={() => {
+                    // Restart when loop fails (e.g. HLS); only if still active and has source
+                    if (activeVideoId !== video.id) return
+                    const ref = videoRefs.current[index]?.current
+                    if (ref?.currentSrc && ref.paused) {
+                      ref.currentTime = 0;
+                      ref.load();
+                      ref.play().catch((err) => { console.log('error restarting video', err); })
+                    }
+                  }}
                 />
                 <div className="absolute bottom-0 left-0 right-0 w-full p-4 text-base font-medium text-shadow-md flex flex-col gap-0.5">
                   {video.subreddit && (
