@@ -280,7 +280,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
     <div className="h-screen w-screen bg-black text-white">
       <div
         ref={scrollContainerRef}
-        className="h-full w-screen snap-y snap-mandatory overflow-y-scroll"
+        className="h-full w-screen snap-y snap-mandatory overflow-y-scroll scrollbar-none"
       >
         {videos.map((video, index) => {
           const isActive = activeVideoId === video.id
