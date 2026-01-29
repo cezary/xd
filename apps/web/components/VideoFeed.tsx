@@ -82,7 +82,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
         const video = videos[index]
         if (!video) return
 
-        if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.95) {
           activeId = video.id
         }
       })
@@ -164,7 +164,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
 
     const observer = new IntersectionObserver(handleIntersection, {
       root: null,
-      threshold: [0.4, 0.6, 0.8],
+      threshold: [0.9, 0.95, 1.0],
     })
 
     sectionRefs.current.forEach(section => {
