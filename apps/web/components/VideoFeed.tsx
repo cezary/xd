@@ -22,6 +22,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
   const [loaded, setLoaded] = useState<Record<string, boolean>>({})
   const [userPaused, setUserPaused] = useState<Record<string, boolean>>({})
   const lastActiveIdRef = useRef<string | null>(null)
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null)
   const [isMuted, setIsMuted] = useState(true)
 
   const ensureVideoRef = (index: number): React.RefObject<HTMLVideoElement | null> => {
@@ -90,10 +91,6 @@ export function VideoFeed({ videos }: VideoFeedProps) {
 
         if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
           activeId = video.id
-          setLoaded(prev => {
-            if (prev[video.id]) return prev
-            return { ...prev, [video.id]: true }
-          })
         }
       })
 
@@ -101,6 +98,26 @@ export function VideoFeed({ videos }: VideoFeedProps) {
         const previousActiveId = lastActiveIdRef.current
         const isNewActive = activeId !== previousActiveId
         lastActiveIdRef.current = activeId
+        setActiveVideoId(activeId)
+
+        // Load the active video and adjacent videos
+        const activeIndex = videos.findIndex(v => v.id === activeId)
+        const adjacentIndices = [
+          activeIndex - 1, // video above
+          activeIndex,     // current video
+          activeIndex + 1, // video below
+        ].filter(idx => idx >= 0 && idx < videos.length)
+
+        setLoaded(prev => {
+          const next = { ...prev }
+          adjacentIndices.forEach(idx => {
+            const vid = videos[idx]
+            if (vid && !next[vid.id]) {
+              next[vid.id] = true
+            }
+          })
+          return next
+        })
 
         // If this is a newly active video, clear any previous userPaused flag
         if (isNewActive) {
@@ -128,7 +145,6 @@ export function VideoFeed({ videos }: VideoFeedProps) {
         })
 
         // Then play the active one if the user has not manually paused it
-        const activeIndex = videos.findIndex(v => v.id === activeId)
         const activeRef = videoRefs.current[activeIndex]
         const activeVideo = activeRef?.current
         if (activeVideo && !userPaused[activeId]) {
@@ -141,6 +157,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
         }
       } else {
         // If nothing is strongly in view, pause all (and leave time as-is)
+        setActiveVideoId(null)
         videoRefs.current.forEach(r => {
           const v = r?.current
           if (v && !v.paused) v.pause()
@@ -158,17 +175,50 @@ export function VideoFeed({ videos }: VideoFeedProps) {
     })
 
     return () => observer.disconnect()
-  }, [videos, userPaused, isMuted])
+  }, [videos, userPaused, isMuted, activeVideoId])
+
+  // Ensure adjacent videos stay paused when they get loaded
+  useEffect(() => {
+    if (activeVideoId === null) return
+
+    const activeIndex = videos.findIndex(v => v.id === activeVideoId)
+    if (activeIndex === -1) return
+
+    const adjacentIndices = [activeIndex - 1, activeIndex + 1].filter(
+      idx => idx >= 0 && idx < videos.length
+    )
+
+    adjacentIndices.forEach(idx => {
+      const ref = videoRefs.current[idx]
+      const video = ref?.current
+      if (video && loaded[videos[idx].id]) {
+        // Ensure adjacent videos are paused
+        if (!video.paused) {
+          video.pause()
+        }
+      }
+    })
+  }, [activeVideoId, videos, loaded])
 
   return (
     <div className="h-screen w-full bg-black text-white flex justify-center">
       <div className="h-full w-full max-w-3xl snap-y snap-mandatory overflow-y-scroll">
         {videos.map((video, index) => {
-          const isLoaded = loaded[video.id]
-          const isPlaying = loaded[video.id] && !userPaused[video.id]
-          const isPreloading = loaded[videos[index-1]?.id] || loaded[videos[index+1]?.id];
+          const isActive = activeVideoId === video.id
+          const activeIndex = activeVideoId !== null 
+            ? videos.findIndex(v => v.id === activeVideoId)
+            : -1
+          const isAdjacent = activeIndex >= 0 && (
+            index === activeIndex - 1 || 
+            index === activeIndex + 1
+          )
+          const shouldPreload = isAdjacent && !isActive
+          
+          // Only pass src to active video and adjacent videos (for preloading)
+          const videoSrc = (isActive || isAdjacent) && loaded[video.id]
+            ? video.hls_url?.replace(/&amp;/g, '&').replace(/f=sd/, 'f=hq') ?? video.src
+            : undefined
 
-          console.log('video', video, isLoaded, isPlaying, isPreloading);
           return (
             <section
               key={video.id}
@@ -176,19 +226,17 @@ export function VideoFeed({ videos }: VideoFeedProps) {
                 sectionRefs.current[index] = el
               }}
               data-index={index}
-              className="max-h-dvh snap-start snap-always h-screen flex flex-col items-center justify-center sm:px-4"
+              className="max-h-svh snap-start snap-always h-screen flex flex-col items-center justify-center sm:px-4"
             >
               <div className="relative w-fit h-full max-h-[95dvh] rounded-xl overflow-hidden bg-black shadow-xl flex items-center justify-center">
                 <video
                   ref={ensureVideoRef(index)}
                   className="h-full w-auto object-contain bg-black"
-                  src={isLoaded ? video.hls_url?.replace(/&amp;/g, '&').replace(/f=sd/, 'f=hq') : undefined}
+                  src={videoSrc}
                   poster={video.thumbnail ? _unescape(video.thumbnail) : undefined}
                   playsInline
                   muted={isMuted}
-                  preload={isPreloading ? "auto" : "none"}
-                  // autoPlay={isLoaded}
-                  // autoPlay
+                  preload={shouldPreload ? "auto" : "none"}
                   loop={true}
                   onClick={() => handleVideoClick(video.id, index)}
                 />
