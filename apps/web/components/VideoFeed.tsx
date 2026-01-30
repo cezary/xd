@@ -308,11 +308,12 @@ export function VideoFeed({ videos }: VideoFeedProps) {
               data-index={index}
               className="max-h-svh snap-start snap-always h-screen flex flex-col items-center justify-center sm:px-4"
             >
-              <div className="relative w-fit h-full max-h-[95dvh] max-w-3xl rounded-xl overflow-hidden bg-black shadow-xl flex items-center justify-center">
+              <div className="relative w-fit h-full max-h-[98dvh] max-w-3xl rounded-xl overflow-hidden bg-black shadow-xl flex items-center justify-center">
                 <video
                   ref={ensureVideoRef(index)}
                   className="h-full w-auto object-contain bg-black"
-                  src={videoSrc}
+                  // HACK time fragment forces Safari to load the first tiny fraction of the video, enabling the thumbnail
+                  src={videoSrc ? `${videoSrc}#t=0.001` : undefined}
                   poster={video.thumbnail ? _unescape(video.thumbnail) : undefined}
                   playsInline
                   muted={isMuted}
