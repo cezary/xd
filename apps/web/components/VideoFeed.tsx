@@ -27,6 +27,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null)
   const [isMuted, setIsMuted] = useState(true)
   const hasInteractedRef = useRef(false)
+  const [videoProgress, setVideoProgress] = useState<Record<string, { currentTime: number; duration: number }>>({})
 
   const ensureVideoRef = (index: number): React.RefObject<HTMLVideoElement | null> => {
     if (!videoRefs.current[index]) {
@@ -376,8 +377,53 @@ export function VideoFeed({ videos }: VideoFeedProps) {
                       ref.play().catch((err) => { console.log('error restarting video', err); })
                     }
                   }}
+                  onTimeUpdate={(e) => {
+                    const el = e.currentTarget
+                    setVideoProgress(prev => ({
+                      ...prev,
+                      [video.id]: { currentTime: el.currentTime, duration: el.duration || 0 }
+                    }))
+                  }}
+                  onLoadedMetadata={(e) => {
+                    const el = e.currentTarget
+                    setVideoProgress(prev => ({
+                      ...prev,
+                      [video.id]: { currentTime: el.currentTime, duration: el.duration || 0 }
+                    }))
+                  }}
                 />
-                <div className="absolute bottom-0 left-0 right-0 w-full p-4 text-base font-medium text-shadow-lg/30 flex flex-col gap-0.5">
+                {/* Progress bar */}
+                {(() => {
+                  const progress = videoProgress[video.id]
+                  const percentage = progress && progress.duration > 0 
+                    ? (progress.currentTime / progress.duration) * 100 
+                    : 0
+                  return (
+                    <div 
+                      className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 cursor-pointer group"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const rect = e.currentTarget.getBoundingClientRect()
+                        const clickX = e.clientX - rect.left
+                        const percentage = clickX / rect.width
+                        const videoEl = videoRefs.current[index]?.current
+                        if (videoEl && progress?.duration) {
+                          videoEl.currentTime = percentage * progress.duration
+                        }
+                      }}
+                    >
+                      <div 
+                        className="h-full bg-white/20 group-hover:bg-white/50 transition-all duration-100"
+                        style={{ width: `${percentage}%` }}
+                      />
+                      <div 
+                        className="absolute top-1/2 -translate-y-[2px] w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ left: `${percentage}%`, transform: `translate(-50%, -50%)` }}
+                      />
+                    </div>
+                  )
+                })()}
+                <div className="absolute bottom-2 left-0 right-0 w-full p-4 text-base font-medium text-shadow-lg/30 flex flex-col gap-0.5">
                   {video.subreddit && (
                     <a
                       href={`https://reddit.com/r/${video.subreddit}`}
