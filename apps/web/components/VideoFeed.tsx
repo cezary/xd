@@ -26,6 +26,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
   const lastActiveIdRef = useRef<string | null>(null)
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null)
   const [isMuted, setIsMuted] = useState(true)
+  const hasInteractedRef = useRef(false)
 
   const ensureVideoRef = (index: number): React.RefObject<HTMLVideoElement | null> => {
     if (!videoRefs.current[index]) {
@@ -39,8 +40,9 @@ export function VideoFeed({ videos }: VideoFeedProps) {
     const el = refObj.current
     if (!el) return
 
-    // First interaction: unmute globally, then play
-    if (isMuted) {
+    // First ever interaction: unmute globally, then play
+    if (!hasInteractedRef.current) {
+      hasInteractedRef.current = true
       setIsMuted(false)
       if (el.paused && el.currentSrc) {
         el
@@ -53,7 +55,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
       return
     }
 
-    // After unmuted: toggle play/pause (only if element has a source)
+    // After first interaction: toggle play/pause only (don't affect mute state)
     if (el.paused) {
       if (el.currentSrc) {
         el
@@ -67,7 +69,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
       el.pause()
       setUserPaused(prev => ({ ...prev, [id]: true }))
     }
-  }, [isMuted])
+  }, [])
 
   useEffect(() => {
     if (!sectionRefs.current.length) return
@@ -276,8 +278,51 @@ export function VideoFeed({ videos }: VideoFeedProps) {
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [videos, activeVideoId, handleVideoClick])
 
+  // Update page title based on active video
+  useEffect(() => {
+    if (activeVideoId) {
+      const activeVideo = videos.find(v => v.id === activeVideoId)
+      if (activeVideo) {
+        const title = activeVideo.title || ''
+        const subreddit = activeVideo.subreddit ? `r/${activeVideo.subreddit}` : ''
+        const parts = [subreddit, title].filter(Boolean).join(' ')
+        document.title = parts ? `${parts} - xd` : 'xd'
+      } else {
+        document.title = 'xd'
+      }
+    } else {
+      document.title = 'xd'
+    }
+
+    return () => {
+      document.title = 'xd'
+    }
+  }, [activeVideoId, videos])
+
   return (
     <div className="h-screen w-screen bg-black text-white">
+      <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between">
+        <div className="text-2xl text-shadow-lg/30 mix-blend-difference font-sans font-bold">XD</div>
+        <button
+          onClick={() => setIsMuted(prev => !prev)}
+          className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors backdrop-blur-sm"
+          aria-label={isMuted ? "Unmute" : "Mute"}
+        >
+          {isMuted ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+              <line x1="23" y1="9" x2="17" y2="15"/>
+              <line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            </svg>
+          )}
+        </button>
+      </div>
       <div
         ref={scrollContainerRef}
         className="h-full w-screen snap-y snap-mandatory overflow-y-scroll scrollbar-none"

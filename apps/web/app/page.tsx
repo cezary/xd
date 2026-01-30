@@ -1,4 +1,5 @@
 import { unescape as _unescape } from 'lodash-es';
+import { Metadata } from 'next';
 
 import { VideoFeed } from "../components/VideoFeed"
 
@@ -19,6 +20,11 @@ type VideoItem = {
   reddit_url?: string
   subreddit?: string
 }
+
+export const metadata: Metadata = {
+  title: 'xd',
+  description: 'xd',
+};
 
 function extractVideoFromPost(post: any): VideoItem | null {
   const id = post.id as string | undefined
@@ -109,9 +115,6 @@ export default async function Page() {
   const videos = getVideosFromListing(data)
 
   return (
-    <>
-      <div className="absolute top-4 left-4 z-10 text-2xl text-shadow-lg/30 mix-blend-difference font-sans font-bold">XD</div>
-      <VideoFeed videos={videos} />
-    </>
+    <VideoFeed videos={videos} />
   );
 }
