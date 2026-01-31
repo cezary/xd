@@ -17,6 +17,8 @@ type VideoFeedProps = {
   videos: VideoItem[]
 }
 
+const SECONDS_PER_JUMP = 5;
+
 export function VideoFeed({ videos }: VideoFeedProps) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const sectionRefs = useRef<(HTMLElement | null)[]>([])
@@ -252,22 +254,39 @@ export function VideoFeed({ videos }: VideoFeedProps) {
           setIsMuted(prev => !prev)
           break
         }
+        case "r": {
+          e.preventDefault();
+          if (activeVideoId === null) return;
+          const activeIndex = videos.findIndex(v => v.id === activeVideoId)
+          if (activeIndex === -1) return;
+          const activeVideo = videoRefs.current[activeIndex]?.current
+          if (activeVideo?.currentSrc && activeVideo.duration) {
+            activeVideo.currentTime = 0;
+          }
+          break;
+        }
         case "arrowleft": {
-          // Back 5 seconds
+          // Back 5 seconds with wraparound
           e.preventDefault()
-          if (activeVideo?.currentSrc) {
+          if (activeVideo?.currentSrc && activeVideo.duration) {
             try {
-              activeVideo.currentTime = Math.max(0, activeVideo.currentTime - 5)
+              const newTime = activeVideo.currentTime - SECONDS_PER_JUMP
+              activeVideo.currentTime = newTime < 0
+                ? activeVideo.duration + newTime
+                : newTime
             } catch {}
           }
           break
         }
         case "arrowright": {
-          // Forward 5 seconds
+          // Forward 5 seconds with wraparound
           e.preventDefault()
-          if (activeVideo?.currentSrc) {
+          if (activeVideo?.currentSrc && activeVideo.duration) {
             try {
-              activeVideo.currentTime = Math.min(activeVideo.duration ?? 0, activeVideo.currentTime + 5)
+              const newTime = activeVideo.currentTime + SECONDS_PER_JUMP
+              activeVideo.currentTime = newTime > activeVideo.duration
+                ? newTime - activeVideo.duration
+                : newTime
             } catch {}
           }
           break
