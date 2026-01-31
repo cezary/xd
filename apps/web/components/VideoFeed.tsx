@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useCallback, useEffect, useRef, useState } from "react"
-import { unescape as _unescape } from 'lodash-es';
+import { unescape } from 'lodash-es'
 
 type VideoItem = {
   id: string
@@ -387,7 +387,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
                   className="h-full w-auto object-contain bg-black"
                   // HACK time fragment forces Safari to load the first tiny fraction of the video, enabling the thumbnail
                   src={videoSrc ? `${videoSrc}#t=0.001` : undefined}
-                  poster={video.thumbnail ? _unescape(video.thumbnail) : undefined}
+                  poster={video.thumbnail ? unescape(video.thumbnail) : undefined}
                   playsInline
                   muted={isMuted}
                   preload={shouldPreload ? "auto" : "none"}
@@ -485,10 +485,10 @@ export function VideoFeed({ videos }: VideoFeedProps) {
                       rel="noopener noreferrer"
                       className="text-white hover:text-white/80 transition-colors line-clamp-1 hover:line-clamp-none"
                     >
-                      {video.title}
+                      {unescape(video.title)}
                     </a>
                   ) : (
-                    video.title
+                    unescape(video.title)
                   )}
                 </div>
               </div>
