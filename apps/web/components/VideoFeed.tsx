@@ -322,7 +322,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
   return (
     <div className="h-screen w-screen bg-black text-white">
       <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between">
-        <div className="text-2xl text-shadow-lg/30 mix-blend-difference font-sans font-bold">XD</div>
+        <div className="text-2xl text-shadow-lg/30 mix-blend-difference font-sans font-bold">xD</div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
@@ -476,7 +476,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
                       }}
                     >
                       <div 
-                        className="h-full bg-white/20 group-hover:bg-white/50 transition-all duration-100"
+                        className="h-full bg-white/20 group-hover:bg-white/80 transition-all duration-100"
                         style={{ width: `${percentage}%` }}
                       />
                       <div 
@@ -486,13 +486,12 @@ export function VideoFeed({ videos }: VideoFeedProps) {
                     </div>
                   )
                 })()}
-                <div className="absolute bottom-2 left-0 right-0 w-full p-4 text-base font-medium text-shadow-lg/30 flex flex-col gap-0.5">
+                <div className="absolute bottom-2 left-0 right-0 w-full p-4 text-base font-medium text-white text-shadow-lg/30 flex flex-col gap-0.5">
                   {video.subreddit && (
                     <a
                       href={`https://reddit.com/r/${video.subreddit}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-white hover:text-white/80 transition-colors"
                     >
                       r/{video.subreddit}
                     </a>
@@ -502,7 +501,7 @@ export function VideoFeed({ videos }: VideoFeedProps) {
                       href={video.reddit_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-white hover:text-white/80 transition-colors line-clamp-1 hover:line-clamp-none"
+                      className="text-white line-clamp-1 hover:line-clamp-none"
                     >
                       {unescape(video.title)}
                     </a>
