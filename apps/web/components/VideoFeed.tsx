@@ -30,6 +30,11 @@ export function VideoFeed({ videos }: VideoFeedProps) {
   const [isMuted, setIsMuted] = useState(true)
   const hasInteractedRef = useRef(false)
   const [videoProgress, setVideoProgress] = useState<Record<string, { currentTime: number; duration: number }>>({})
+  
+  // Touch scrubbing state
+  const touchStartRef = useRef<{ x: number; y: number; time: number; videoIndex: number } | null>(null)
+  const isScrrubbingRef = useRef(false)
+  const [isScrubbing, setIsScrubbing] = useState(false)
 
   const ensureVideoRef = (index: number): React.RefObject<HTMLVideoElement | null> => {
     if (!videoRefs.current[index]) {
@@ -412,7 +417,62 @@ export function VideoFeed({ videos }: VideoFeedProps) {
                   preload={shouldPreload ? "auto" : "none"}
                   // loop
                   // controls
-                  onClick={(e) => { e.preventDefault(); handleVideoClick(video.id, index) }}
+                  onClick={(e) => { 
+                    e.preventDefault()
+                    // Don't trigger click if we were scrubbing
+                    if (isScrrubbingRef.current) {
+                      isScrrubbingRef.current = false
+                      return
+                    }
+                    handleVideoClick(video.id, index) 
+                  }}
+                  onTouchStart={(e) => {
+                    const touch = e.touches[0]
+                    const videoEl = videoRefs.current[index]?.current
+                    if (touch && videoEl) {
+                      touchStartRef.current = {
+                        x: touch.clientX,
+                        y: touch.clientY,
+                        time: videoEl.currentTime,
+                        videoIndex: index
+                      }
+                    }
+                  }}
+                  onTouchMove={(e) => {
+                    if (!touchStartRef.current || touchStartRef.current.videoIndex !== index) return
+                    const touch = e.touches[0]
+                    const videoEl = videoRefs.current[index]?.current
+                    if (!touch || !videoEl || !videoEl.duration) return
+                    
+                    const deltaX = touch.clientX - touchStartRef.current.x
+                    const deltaY = touch.clientY - touchStartRef.current.y
+                    
+                    // If not yet scrubbing, check if we should start
+                    if (!isScrrubbingRef.current) {
+                      // Require at least 10px movement to make a decision
+                      if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) return
+                      
+                      // Only activate scrubbing if moving mostly horizontally
+                      if (Math.abs(deltaX) <= Math.abs(deltaY)) return
+                      
+                      isScrrubbingRef.current = true
+                      setIsScrubbing(true)
+                    }
+                    
+                    // Map touch X position directly to video progress
+                    const rect = videoEl.getBoundingClientRect()
+                    const relativeX = touch.clientX - rect.left
+                    const percentage = Math.max(0, Math.min(1, relativeX / rect.width))
+                    videoEl.currentTime = percentage * videoEl.duration
+                  }}
+                  onTouchEnd={() => {
+                    touchStartRef.current = null
+                    setIsScrubbing(false)
+                    // Reset scrubbing flag after a short delay to prevent click from firing
+                    setTimeout(() => {
+                      isScrrubbingRef.current = false
+                    }, 100)
+                  }}
                   onEnded={() => {
                     // Restart when loop fails (e.g. HLS); only if still active and has source
                     if (activeVideoId !== video.id) return
